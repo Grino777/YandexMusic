@@ -28,7 +28,7 @@ class YandexMusicDownloader:
         chunk_size = 5
 
         for i in range(0, len(tracks_list), chunk_size):
-            yield tracks_list[i : i + chunk_size]
+            yield tracks_list[i: i + chunk_size]
 
     def _create_folders(self):
         """Создание папок по названию плейлистов"""
@@ -86,7 +86,7 @@ class YandexMusicDownloader:
         """Получить треки из плейлистов"""
 
         for playlist_item in self.user_playlists:
-            print(f"Скачивается плейлист: {playlist_item.get("title")}\n")
+            print(f"Скачивается плейлист: {playlist_item.get('title')}\n")
 
             tracks_list: List[TrackShort] = []
 
@@ -114,6 +114,8 @@ async def main():
 
     client: tuple[ClientAsync] = await asyncio.gather(asyncio.create_task(get_client()))
     app = YandexMusicDownloader(*client)
+    await app.init()
+    await app.get_tracks_from_playlists()
     print("!DONE")
 
 
