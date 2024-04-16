@@ -1,15 +1,14 @@
 """Settings module"""
 
-from dotenv import find_dotenv, load_dotenv
-from pydantic_settings import BaseSettings
-
-ENV = load_dotenv(find_dotenv(".env"))
+from pydantic import BaseModel
+from config import TOKEN, clients_uid
 
 
-class Settings(BaseSettings):
+class Settings(BaseModel):
     """Settings class"""
 
-    token: str
+    token: str = TOKEN
+    clients_uid: dict = clients_uid
 
 
 settings = Settings()

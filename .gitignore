@@ -163,3 +163,4 @@ MUSIC
 123.json
 .vscode
 utils/__pycache__
+config.py

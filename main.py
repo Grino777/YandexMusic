@@ -2,9 +2,9 @@
 
 import asyncio
 import os
+
 from asyncio import Task
 from typing import Dict, List, Union
-
 from tqdm import tqdm
 from transliterate import translit
 from yandex_music import ClientAsync, Playlist, TrackShort
@@ -16,11 +16,13 @@ from utils.client import get_client
 class YandexMusicDownloader:
     """Приложение для скачивания музыки"""
 
+    client: ClientAsync
+
     ROOT_DIRECTORY = os.path.dirname((os.path.realpath(__file__)))
     NAME_MUSIC_FOLDER = "MUSIC"
 
-    def __init__(self, client):
-        self.client: ClientAsync = client
+    def __init__(self, client: ClientAsync):
+        self.client = client
         self.user_playlists: List[Dict[str, Union[Playlist, str]]] = []
 
     def _get_split_list_of_tracks(self, tracks_list: List):
@@ -112,10 +114,14 @@ class YandexMusicDownloader:
 async def main():
     """Main def"""
 
-    client: tuple[ClientAsync] = await asyncio.gather(asyncio.create_task(get_client()))
-    app = YandexMusicDownloader(*client)
-    await app.init()
-    await app.get_tracks_from_playlists()
+    client: tuple[ClientAsync] = await get_client()
+    # app = YandexMusicDownloader(*client)
+    # await app.init()
+    # await app.get_tracks_from_playlists()
+
+    # user = await get_client()
+    # res = await user.users_playlists_list('688508748')
+
     print("!DONE")
 
 
