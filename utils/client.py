@@ -1,11 +1,10 @@
 """Client module"""
 
-from yandex_music import Client, ClientAsync
-
-from utils.settings import settings
-
+from yandex_music import ClientAsync
+from config import TOKEN
 
 
 async def get_client():
-    client: ClientAsync = await ClientAsync(token=settings.token).init()
+    """Get session"""
+    client: ClientAsync = await ClientAsync(token=TOKEN).init()
     return client
