@@ -2,6 +2,7 @@
 
 import asyncio
 import os
+import re
 
 from asyncio import Task
 from typing import Dict, List, Union
@@ -9,7 +10,7 @@ from tqdm import tqdm
 from transliterate import translit
 from yandex_music import ClientAsync, Playlist, TrackShort
 from yandex_music.track.track import Track
-from yandex_music.exceptions import InvalidBitrateError, TimedOutError
+from yandex_music.exceptions import InvalidBitrateError, TimedOutError, UnauthorizedError
 
 from utils.client import get_client
 from utils.users import yandex_clients
@@ -80,19 +81,38 @@ class YandexMusicDownloader:
         if not os.path.exists(self.NAME_MUSIC_FOLDER):
             os.makedirs(self.NAME_MUSIC_FOLDER)
 
-    async def init(self):
-        """Инициализация"""
+    async def _download_tracks_from_the_playlist(self):
+        """Скачать треки из плейлистов"""
 
-        self._check_current_directory()
-        self._create_username_folder()
-        await self._get_playlists_user()
-        self._create_playlists_folders()
-        await self._download_tracks_from_the_playlist()
+        for playlist_item in self.user_playlists:
+            print(f"Скачивается плейлист: {playlist_item.get('title')}\n")
 
-    async def download_tracks(self, track: Track, path: str = ""):
+            tracks_list: List[TrackShort] = []
+
+            path = os.path.join(self.user_directory, playlist_item["title"])
+            # path = playlist_item["path"]
+            playlist: Playlist = playlist_item.get("playlist")  # type:ignore
+            tracks_list.extend(await playlist.fetch_tracks_async())
+            tracks: List[Track | None] = [item.track for item in tracks_list]
+
+            new_tracks_list = list(self._get_split_list_of_tracks(tracks_list=tracks))
+
+            for tracks_list_item in tqdm(new_tracks_list):
+                coro_tracks: List[Task] = [
+                    asyncio.create_task(
+                        self._download_tracks(track=track, path=str(path))
+                    )
+                    for track in tracks_list_item
+                ]
+                await asyncio.gather(*coro_tracks)
+
+    async def _download_tracks(self, track: Track, path: str = ""):
         """Загрузка трека"""
 
+        error_symbols = "[\/:*?\"<>\|+]"
+
         filename = f"{track.artists[0].name} - {track.title}.mp3"
+        filename = re.sub(error_symbols, "", filename)
         track_path = str(os.path.join(path, filename))
 
         result = None
@@ -112,36 +132,22 @@ class YandexMusicDownloader:
                 result = await track.download_async(
                     filename=track_path, codec="mp3", bitrate_in_kbps=192,
                 )
+            except UnauthorizedError:
+                pass
             except Exception as e:
                 print(e)
 
             return result
         return result
 
-    async def _download_tracks_from_the_playlist(self):
-        """Скачать треки из плейлистов"""
+    async def init(self):
+        """Инициализация"""
 
-        for playlist_item in self.user_playlists:
-            print(f"Скачивается плейлист: {playlist_item.get('title')}\n")
-
-            tracks_list: List[TrackShort] = []
-
-            path = os.path.join(self.user_directory, playlist_item["title"])
-            # path = playlist_item["path"]
-            playlist: Playlist = playlist_item.get("playlist")  # type:ignore
-            tracks_list.extend(await playlist.fetch_tracks_async())
-            tracks: List[Track | None] = [item.track for item in tracks_list]
-
-            new_tracks_list = tqdm(list(self._get_split_list_of_tracks(tracks_list=tracks)))
-
-            for tracks_list_item in new_tracks_list:
-                coro_tracks: List[Task] = [
-                    asyncio.create_task(
-                        self.download_tracks(track=track, path=str(path))
-                    )
-                    for track in tracks_list_item
-                ]
-                await asyncio.gather(*coro_tracks)
+        self._check_current_directory()
+        self._create_username_folder()
+        await self._get_playlists_user()
+        self._create_playlists_folders()
+        await self._download_tracks_from_the_playlist()
 
 
 def check_user_uid() -> YandexUser | None:
