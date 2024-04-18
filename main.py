@@ -181,7 +181,7 @@ async def main():
     app = YandexMusicDownloader(client=client, user=user)
     await app.init()
 
-    print("!DONE")
+    print("DONE!")
 
 
 if __name__ == "__main__":
