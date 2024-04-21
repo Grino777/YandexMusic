@@ -164,3 +164,5 @@ MUSIC
 .vscode
 utils/__pycache__
 config.py
+TODO.txt
+users_list
