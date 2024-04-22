@@ -5,7 +5,6 @@ import os
 from typing import Literal
 
 from users.users import YandexUser, get_yandex_users
-from config import OS_NAME
 from config import ROOT_DIR
 
 
@@ -16,13 +15,12 @@ class App:
         1: "Добавить пользователя в users_list",
         2: "Выбрать пользователя для скачивания плейлистов",
     }
-    SYSTEM = os.name
 
     def __init__(self):
+        self.os_name = os.name
         self._check_users_list_file()
         self.users_list_file = os.path.join(ROOT_DIR, "users_list.json")
         self.yandex_users: list[YandexUser] = get_yandex_users()
-        self.os_name = OS_NAME
 
     # def _check_user_uid(self) -> YandexUser | None:
     #     """Получить user data"""
@@ -132,9 +130,16 @@ class App:
 
     def add_user(self, user: YandexUser):
         """Добавить пользователя в users_list.json"""
-        pass
+        json_data = self._json_to_dict()
 
-    def get_user(self):
+        user_obj = {'id': json_data['id'] + 1, 'name': user.name, 'uid': user.uid}
+
+        json_data["users_counter"] = + 1
+        json_data["users"].append(user_obj)
+
+        self._rewrite_users_list_file(json_data)
+
+    def get_user(self, id: int):
         """Получить объект пользователя"""
         pass
 
