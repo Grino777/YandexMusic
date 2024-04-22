@@ -2,7 +2,8 @@
 
 import json
 import os
-from typing import Any, Dict, Union
+
+from typing import Any, Dict
 import requests
 
 from requests import Response
@@ -21,7 +22,7 @@ class YandexUser(BaseModel):
 
 def get_users():
     """Получить список пользвателей из users_list.json"""
-    path = os.path.join(ROOT_DIR, "users_list", "users_list.json")
+    path = os.path.join(ROOT_DIR, "users_list.json")
 
     with open(path, "r", encoding="utf-8") as file:
         users = json.load(file)
@@ -40,12 +41,11 @@ def check_user(username: str):
 
     if response.status_code == 200:
         resp_result: Dict[str, Dict[str, Any]] = response.json()
-
-        # result: Dict[str, Any] = resp_result['result']
         result: Dict[str, Any] | None = resp_result.get("result", None)
 
         if isinstance(result, dict):
             user_uid = result.get("uid")
+            
     else:
         print(f"Ошибка {response.status_code} при проверке пользователя {username}")
 
@@ -68,6 +68,10 @@ def converting_users(users: list):
     return users
 
 
-yandex_users = get_users() if len(get_users()) == 0 else []
+def get_yandex_users() -> list[YandexUser]:
+    """Получить список с Yandex пользователями"""
+    
+    yandex_users = get_users() if len(get_users()) == 0 else []
+    yandex_users = converting_users(yandex_users)
 
-yandex_users = converting_users(yandex_users)
+    return yandex_users
