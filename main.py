@@ -49,7 +49,7 @@ class YandexMusicDownloader:
         chunk_size = 5
 
         for i in range(0, len(tracks_list), chunk_size):
-            yield tracks_list[i: i + chunk_size]
+            yield tracks_list[i : i + chunk_size]
 
     def _create_username_folder(self) -> None:
         path = os.path.join(self.ROOT_DIRECTORY, self.NAME_MUSIC_FOLDER, self.user_name)
@@ -164,18 +164,22 @@ class YandexMusicDownloader:
         await self._download_tracks_from_the_playlist()
 
 
-class App():
-    CHOICES = {
-        1: 'Добавить пользователя в users_list',
-        2: 'Выбрать пользователя для скачивания плейлистов',
+class App:
+    """Класс приложения"""
+
+    CHOICES: dict[int, str] = {
+        1: "Добавить пользователя в users_list",
+        2: "Выбрать пользователя для скачивания плейлистов",
     }
+    
+    SYSTEM = os.name
 
     def _check_user_uid(self) -> YandexUser | None:
         """Получить user data"""
 
         user_id = input("Введите ID: ")
 
-        if user_id == 'q':
+        if user_id == "q":
             sys.exit()
 
         try:
@@ -189,31 +193,34 @@ class App():
 
         return result
 
-    def _get_user(self):
+    def _get_user(self) -> YandexUser | None:
         """Функция запуска выбора пользователя"""
 
-        os.system('cls')
+        if self.SYSTEM == 'nt':
+            os.system("cls")
+        if self.SYSTEM == 'posix':
+            os.system("clear")
 
-        print("Выберете ID пользователя у которого хотите скачать плейлисты:")
+        print("Выберете ID пользователя у которого хотите скачать плейлисты, либо наэмите 'q' для выхода")
 
         for client in yandex_users:
             print(f"{client.name.capitalize()}: {client.id}", sep="\n")
         print()
 
         while True:
-            user = self._check_user_uid()
+            user: YandexUser | None = self._check_user_uid()
             if user:
                 return user
 
     # def run_user_selection(self) -> YandexUser:
 
-    def run_user_selection(self) -> YandexUser:
+    def run_user_selection(self) -> YandexUser | None:
         """Функция запуска выбора пользователя"""
 
         for choice_id, choice in self.CHOICES.items():
-            print(f'{choice_id}: {choice}', sep='\n')
+            print(f"{choice_id}: {choice}", sep="\n")
 
-        user_choice = input('Выберете действие: ')
+        user_choice = input("Выберете действие: ")
 
         try:
             user_choice = int(user_choice)
@@ -222,7 +229,7 @@ class App():
                 raise ValueError
 
         except ValueError:
-            print('Выбрали неправильное значение!\n')
+            print("Выбрали неправильное значение!\n")
             self.run_user_selection()
 
         if user_choice == 1:
@@ -230,7 +237,7 @@ class App():
         if user_choice == 2:
             user = self._get_user()
             return user
-        if user_choice == 'q':
+        if user_choice == "q":
             sys.exit()
 
 
