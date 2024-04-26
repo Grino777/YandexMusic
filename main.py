@@ -2,11 +2,7 @@
 
 import asyncio
 
-from yandex_music import ClientAsync
-
-from app.app import App
-from downloader.downloader import YandexMusicDownloader
-from utils.client import get_client
+from utils.app import App
 
 
 async def main():
@@ -14,16 +10,7 @@ async def main():
 
     app = App()
 
-    print(app._json_to_dict())
-
-    # user = app.run_user_selection()
-
-    # if user:
-    #     client: ClientAsync = await get_client()
-
-    #     downloader = YandexMusicDownloader(client=client, user=user, root_dir=root_dir)
-    #     await downloader.init()
-    # await app._get_the_favorite_playlist()
+    await app.run_user_selection()
 
     print("DONE!")
 

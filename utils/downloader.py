@@ -8,12 +8,13 @@ from typing import Dict, List
 
 from tqdm import tqdm
 from transliterate import translit
-from yandex_music import ClientAsync, Playlist, TrackShort, TracksList, Track
+from yandex_music import ClientAsync, Playlist, Track, TrackShort, TracksList
 from yandex_music.exceptions import (
     InvalidBitrateError,
     TimedOutError,
     UnauthorizedError,
 )
+
 from users.users import YandexUser
 
 
@@ -31,7 +32,7 @@ class YandexMusicDownloader:
         self.user_playlists: List[Dict[str, Playlist]] = []
 
     def _get_user_directory(self) -> str:
-        username = self.user.name.capitalize()
+        username = self.user.login.capitalize()
         path = os.path.join(self.root_dir, self.NAME_MUSIC_FOLDER, username)
         return path
 
@@ -43,7 +44,7 @@ class YandexMusicDownloader:
             yield tracks_list[i : i + chunk_size]
 
     def _create_username_folder(self) -> None:
-        username = self.user.name.capitalize()
+        username = self.user.login.capitalize()
         path = os.path.join(self.root_dir, self.NAME_MUSIC_FOLDER, username)
         if not os.path.exists(path):
             os.makedirs(path)
@@ -57,7 +58,7 @@ class YandexMusicDownloader:
             if not os.path.exists(path):
                 os.mkdir(path)
 
-    async def _get_the_favorite_playlist(self) -> None: #TODO
+    async def _get_the_favorite_playlist(self) -> None:  # TODO
         """Получить список треков с отметкой 'Мне нравится'"""
 
         favorite_playlist: TracksList | None = await self.client.users_likes_tracks(
@@ -109,12 +110,12 @@ class YandexMusicDownloader:
 
             for tracks_list_item in tqdm(new_tracks_list):
                 coro_tracks: List[Task] = [
-                    asyncio.create_task(
-                        self._download_tracks(track=track, path=str(path))
-                    )
+                    asyncio.create_task(self._download_tracks(track=track, path=str(path)))
                     for track in tracks_list_item
                 ]
                 await asyncio.gather(*coro_tracks)
+            
+            print()
 
     async def _download_tracks(self, track: Track, path: str = "") -> None:
         """Загрузка трека"""
