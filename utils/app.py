@@ -131,7 +131,7 @@ class App:
             if tmp:
                 user = tmp[0]
         except ValueError:
-            print(Fore.red("Вы ввели неправильный id пользователя"))
+            print("Вы ввели неправильный id пользователя")
 
         self._update_users_list_file()
 

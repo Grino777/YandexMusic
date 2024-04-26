@@ -15,7 +15,7 @@ from yandex_music.exceptions import (
     UnauthorizedError,
 )
 
-from users.users import YandexUser
+from utils.users import YandexUser
 
 
 class YandexMusicDownloader:
