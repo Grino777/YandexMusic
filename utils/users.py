@@ -100,7 +100,7 @@ class Users:
 
         print("Пользователь успешно удален!")
 
-    def get_user(self, user_id: int) -> YandexUser | None:
+    def get_user(self, user_id: int) -> YandexUser:
         """Получить объект пользователя"""
 
         users: List[YandexUser] = self.get_users()
@@ -109,6 +109,7 @@ class Users:
 
         if user is None:
             print("Пользователь не найден")
+            return YandexUser(login='', uid=0)
         else:
             return user[0]
 

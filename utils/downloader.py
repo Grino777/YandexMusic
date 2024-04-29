@@ -4,7 +4,7 @@ import asyncio
 import os
 import re
 from asyncio import Task
-from typing import Dict, List
+from typing import Any, Dict, List
 
 from tqdm import tqdm
 from transliterate import translit
@@ -15,6 +15,7 @@ from yandex_music.exceptions import (
     UnauthorizedError,
 )
 
+from config import ROOT_DIR
 from utils.users import YandexUser
 
 
@@ -24,12 +25,12 @@ class YandexMusicDownloader:
     client: ClientAsync
     NAME_MUSIC_FOLDER = "MUSIC"
 
-    def __init__(self, client: ClientAsync, user: YandexUser, root_dir: str) -> None:
+    def __init__(self, client: ClientAsync, user: YandexUser) -> None:
         self.client = client
-        self.root_dir = root_dir
+        self.root_dir = ROOT_DIR
         self.user: YandexUser = user
         self.user_directory = self._get_user_directory()
-        self.user_playlists: List[Dict[str, Playlist]] = []
+        self.user_playlists: List[Dict[str, Any]] = []
 
     def _get_user_directory(self) -> str:
         username = self.user.login.capitalize()
@@ -58,27 +59,33 @@ class YandexMusicDownloader:
             if not os.path.exists(path):
                 os.mkdir(path)
 
-    async def _get_the_favorite_playlist(self) -> None:  # TODO
+    async def _get_the_favorite_playlist(self):
         """Получить список треков с отметкой 'Мне нравится'"""
+
+        result = None
 
         favorite_playlist: TracksList | None = await self.client.users_likes_tracks(
             user_id=self.user.uid
         )
 
         if isinstance(favorite_playlist, TracksList):
-            tracks_list: List[TrackShort] = favorite_playlist.tracks
+            # tracks_list: List[TrackShort] = favorite_playlist.tracks
+            result: dict[str, TracksList | str] | None = {
+                "title": "MyFavoritePlaylist",
+                "playlist": favorite_playlist,
+            }
 
-        print(tracks_list)
+        return result
 
     async def _get_playlists_user(self) -> None:
         """Получить список плейлистов пользователя"""
 
-        user_playlists: List[Playlist] = await self.client.users_playlists_list(
+        playlists: List[Playlist] = await self.client.users_playlists_list(
             user_id=self.user.uid
         )
 
-        if len(user_playlists) > 0:
-            for playlist in user_playlists:
+        if len(playlists) > 0:
+            for playlist in playlists:
                 old_title = str(playlist.title)
                 title = old_title.replace("\xa0", " ")
                 title = translit(title, language_code="ru", reversed=True)
@@ -96,6 +103,13 @@ class YandexMusicDownloader:
     async def _download_tracks_from_the_playlist(self):
         """Скачать треки из плейлистов"""
 
+        favorite_playlist: (
+            dict[str, TracksList | str] | None
+        ) = await self._get_the_favorite_playlist()
+        
+        if favorite_playlist:
+            self.user_playlists.append(favorite_playlist)
+
         for playlist_item in self.user_playlists:
             print(f"Скачивается плейлист: {playlist_item.get('title')}\n")
 
@@ -110,11 +124,13 @@ class YandexMusicDownloader:
 
             for tracks_list_item in tqdm(new_tracks_list):
                 coro_tracks: List[Task] = [
-                    asyncio.create_task(self._download_tracks(track=track, path=str(path)))
+                    asyncio.create_task(
+                        self._download_tracks(track=track, path=str(path))
+                    )
                     for track in tracks_list_item
                 ]
                 await asyncio.gather(*coro_tracks)
-            
+
             print()
 
     async def _download_tracks(self, track: Track, path: str = "") -> None:

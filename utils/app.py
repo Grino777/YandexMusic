@@ -7,10 +7,10 @@ from typing import Literal
 from yandex_music import ClientAsync
 
 from config import ROOT_DIR
-from utils.downloader import YandexMusicDownloader
-from utils.users import Users, YandexUser
 from utils.client import get_client
 from utils.colors import Color
+from utils.downloader import YandexMusicDownloader
+from utils.users import Users, YandexUser
 
 
 class App:
@@ -71,9 +71,7 @@ class App:
 
         if user:
             client: ClientAsync = await get_client()
-            downloader = YandexMusicDownloader(
-                client=client, user=user, root_dir=self.root_dir
-            )
+            downloader = YandexMusicDownloader(client=client, user=user)
 
         await downloader.init()
 
@@ -83,7 +81,7 @@ class App:
         print(
             "\n"
             + Color.UNDERLINE
-            + "Управление: Введите 'q' для выхода, 'r' для перезапуска программ\n"
+            + "Управление: Введите 'q' для выхода, 'r' для перезапуска программы\n"
             + Color.ENDC
         )
 
