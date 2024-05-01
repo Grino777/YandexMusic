@@ -10,7 +10,7 @@ async def main():
 
     app = App()
 
-    await app.run_user_selection()
+    await app.run()
 
     print("DONE!")
 

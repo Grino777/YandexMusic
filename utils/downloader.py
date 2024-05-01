@@ -3,8 +3,8 @@
 import asyncio
 import os
 import re
-from asyncio import Task
-from typing import Any, Dict, List
+
+from typing import List
 
 from tqdm import tqdm
 from transliterate import translit
@@ -29,56 +29,58 @@ class YandexMusicDownloader:
         self.client = client
         self.root_dir = ROOT_DIR
         self.user: YandexUser = user
-        self.user_directory = self._get_user_directory()
-        self.user_playlists: List[Dict[str, Any]] = []
+        self.user_playlists: dict[str, List[TrackShort]] = {}
+        self.user_path = os.path.join(
+            self.root_dir, self.NAME_MUSIC_FOLDER, self.user.login.capitalize()
+        )
 
-    def _get_user_directory(self) -> str:
-        username = self.user.login.capitalize()
-        path = os.path.join(self.root_dir, self.NAME_MUSIC_FOLDER, username)
-        return path
+    async def _init(self):
+        """Инициализация"""
 
-    def _get_split_list_of_tracks(self, tracks_list: List):
-        """Функция для разбивки списка на подсписки по 5 треков"""
-        chunk_size = 5
+        self._check_root_music_folder()
+        self._check_user_folder()
+        await self._get_playlists_user()
+        self._create_playlists_folders()
 
-        for i in range(0, len(tracks_list), chunk_size):
-            yield tracks_list[i : i + chunk_size]
+    def _check_root_music_folder(self) -> None:
+        """Проверяем наличие корневой папки для музыки"""
 
-    def _create_username_folder(self) -> None:
-        username = self.user.login.capitalize()
-        path = os.path.join(self.root_dir, self.NAME_MUSIC_FOLDER, username)
+        path = os.path.join(self.root_dir, self.NAME_MUSIC_FOLDER)
+
         if not os.path.exists(path):
             os.makedirs(path)
 
-    def _create_playlists_folders(self) -> None:
-        """Создание папок по названию плейлистов"""
-        user_directory = self.user_directory
+    def _check_user_folder(self) -> None:
+        """Путь до папки пользователя с плейлистами"""
 
-        for playlist_item in self.user_playlists:
-            path = os.path.join(user_directory, playlist_item.get("title"))  # type: ignore
-            if not os.path.exists(path):
-                os.mkdir(path)
+        path = self.user_path
 
-    async def _get_the_favorite_playlist(self):
-        """Получить список треков с отметкой 'Мне нравится'"""
+        if not os.path.exists(path):
+            os.mkdir(path)
 
-        result = None
+    async def _get_the_favorite_playlist(
+        self,
+    ) -> dict[str, List[TrackShort] | str] | None:
+        """Список треков с отметкой 'Мне нравится'"""
 
         favorite_playlist: TracksList | None = await self.client.users_likes_tracks(
             user_id=self.user.uid
         )
 
-        if isinstance(favorite_playlist, TracksList):
-            # tracks_list: List[TrackShort] = favorite_playlist.tracks
-            result: dict[str, TracksList | str] | None = {
-                "title": "MyFavoritePlaylist",
-                "playlist": favorite_playlist,
-            }
+        if favorite_playlist:
+            favorite_tracks: List[TrackShort] = favorite_playlist.tracks
 
-        return result
+        if isinstance(favorite_tracks, list) and len(favorite_tracks) > 0:
+            self.user_playlists.update(
+                {
+                    "MyFavoritePlaylist": favorite_tracks,
+                }
+            )
 
     async def _get_playlists_user(self) -> None:
         """Получить список плейлистов пользователя"""
+
+        await self._get_the_favorite_playlist()
 
         playlists: List[Playlist] = await self.client.users_playlists_list(
             user_id=self.user.uid
@@ -90,55 +92,50 @@ class YandexMusicDownloader:
                 title = old_title.replace("\xa0", " ")
                 title = translit(title, language_code="ru", reversed=True)
 
-                self.user_playlists.append({"title": title, "playlist": playlist})
+                self.user_playlists.update({title: playlist.tracks})
         else:
             print("У пользователя нет плейлистов либо они скрыты!")
 
-    def _check_current_directory(self):
-        """Проверка директории на наличие корневой папки music"""
+    def _get_user_playlists_names(self):
+        """Получить названия плейлистов пользователя"""
 
-        if not os.path.exists(self.NAME_MUSIC_FOLDER):
-            os.makedirs(self.NAME_MUSIC_FOLDER)
+        return list(self.user_playlists)
 
-    async def _download_tracks_from_the_playlist(self):
-        """Скачать треки из плейлистов"""
+    def _create_playlists_folders(self) -> None:
+        """Создание папок по названию плейлистов"""
 
-        favorite_playlist: (
-            dict[str, TracksList | str] | None
-        ) = await self._get_the_favorite_playlist()
+        playlist_names = self._get_user_playlists_names()
+
+        for playlist_item in playlist_names:
+            path = os.path.join(self.user_path, playlist_item)
+
+            if not os.path.exists(path):
+                os.mkdir(path)
+
+    def _get_split_list_of_tracks(self, tracks_list: List[TrackShort]):
+        """Функция для разбивки списка на подсписки по 5 треков"""
         
-        if favorite_playlist:
-            self.user_playlists.append(favorite_playlist)
+        chunk_size = 5
 
-        for playlist_item in self.user_playlists:
-            print(f"Скачивается плейлист: {playlist_item.get('title')}\n")
+        for i in range(0, len(tracks_list), chunk_size):
+            yield tracks_list[i : i + chunk_size]
 
-            tracks_list: List[TrackShort] = []
+    async def _download_tracks(self, track: TrackShort, path: str = "") -> None:
+        """Загрузка трека
 
-            path = os.path.join(self.user_directory, playlist_item["title"])  # type: ignore
-            playlist: Playlist = playlist_item.get("playlist")  # type:ignore
-            tracks_list.extend(await playlist.fetch_tracks_async())
-            tracks: List[Track | None] = [item.track for item in tracks_list]
+        Args:
+            track (Track): _description_
+            path (str, optional): _description_. Defaults to "".
 
-            new_tracks_list = list(self._get_split_list_of_tracks(tracks_list=tracks))
-
-            for tracks_list_item in tqdm(new_tracks_list):
-                coro_tracks: List[Task] = [
-                    asyncio.create_task(
-                        self._download_tracks(track=track, path=str(path))
-                    )
-                    for track in tracks_list_item
-                ]
-                await asyncio.gather(*coro_tracks)
-
-            print()
-
-    async def _download_tracks(self, track: Track, path: str = "") -> None:
-        """Загрузка трека"""
+        Returns:
+            _type_: _description_
+        """
 
         error_symbols = r'[\\/:*?"<>\|+]'
 
-        filename = f"{track.artists[0].name} - {track.title}.mp3"
+        full_track: Track = await track.fetch_track_async()
+
+        filename = f"{full_track.artists[0].name} - {full_track.title}.mp3"
         filename = re.sub(error_symbols, "", filename)
         track_path = str(os.path.join(path, filename))
 
@@ -146,18 +143,18 @@ class YandexMusicDownloader:
 
         if not os.path.exists(track_path):
             try:
-                result = await track.download_async(
+                result = await full_track.download_async(
                     filename=track_path, codec="mp3", bitrate_in_kbps=320
                 )
             except InvalidBitrateError:
-                result = await track.download_async(
+                result = await full_track.download_async(
                     filename=track_path,
                     codec="mp3",
                     bitrate_in_kbps=192,
                 )
             except TimedOutError:
                 await asyncio.sleep(1)
-                result = await track.download_async(
+                result = await full_track.download_async(
                     filename=track_path,
                     codec="mp3",
                     bitrate_in_kbps=192,
@@ -168,11 +165,33 @@ class YandexMusicDownloader:
             return result
         return result
 
-    async def init(self) -> None:
-        """Инициализация"""
+    async def _download_tracks_from_the_playlist(self) -> None:
+        """Скачать треки из плейлистов"""
 
-        self._check_current_directory()
-        self._create_username_folder()
-        await self._get_playlists_user()
-        self._create_playlists_folders()
+        for playlist_name, playlist in self.user_playlists.items():
+            print(f"Скачивается плейлист: {playlist_name}\n")
+
+            path = os.path.join(self.user_path, playlist_name)
+
+            tracks_list: list[TrackShort] = [item for item in playlist]
+
+            new_tracks_list = list(
+                self._get_split_list_of_tracks(tracks_list=tracks_list)
+            )
+
+            for tracks_list_item in tqdm(new_tracks_list):
+                coro_tracks = [
+                    asyncio.create_task(
+                        self._download_tracks(track=track, path=str(path))
+                    )
+                    for track in tracks_list_item
+                ]
+                await asyncio.gather(*coro_tracks)
+
+        print()
+
+    async def download(self) -> None:
+        """Запуск программы"""
+
+        await self._init()
         await self._download_tracks_from_the_playlist()

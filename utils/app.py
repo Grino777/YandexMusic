@@ -63,7 +63,7 @@ class App:
         if user_input.lower() == "q":
             sys.exit()
         if user_input.lower() == "r":
-            await self.run_user_selection()
+            await self.run()
 
     async def _download_user_playlists(self):
         """Запуск скачивания плейлистов пользователя"""
@@ -72,8 +72,7 @@ class App:
         if user:
             client: ClientAsync = await get_client()
             downloader = YandexMusicDownloader(client=client, user=user)
-
-        await downloader.init()
+            await downloader.download()
 
     async def _get_user_selection(self):
         """Получить выбор пользователя"""
@@ -100,7 +99,7 @@ class App:
 
         except ValueError:
             print("Выбрали неправильное значение!\n")
-            await self.run_user_selection()
+            await self.run()
 
         if user_choice == 1:
             await self._find_user_in_yandex_music_api()
@@ -114,7 +113,7 @@ class App:
             print(f"{user.id}: {user.login}")
 
         user_id = input(
-            "\nВведите id пользователя у которого хотите скачать плейлисты('q' для завершения): "
+            "\nВведите id пользователя у которого хотите скачать плейлисты: "
         )
 
         await self._close_or_restart_app(user_id)
@@ -129,13 +128,16 @@ class App:
             if tmp:
                 user = tmp[0]
         except ValueError:
-            print("Вы ввели неправильный id пользователя")
+            print(
+                Color.FAIL + "Вы ввели неправильный id пользователя" + Color.ENDC + "\n"
+            )
+            await self.get_user()
 
         self._update_users_list_file()
 
         return user
 
-    async def run_user_selection(self) -> YandexUser | None:
+    async def run(self) -> YandexUser | None:
         """Функция запуска выбора пользователя"""
 
         while True:
