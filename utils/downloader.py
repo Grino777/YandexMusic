@@ -3,7 +3,6 @@
 import asyncio
 import os
 import re
-
 from typing import List
 
 from tqdm import tqdm
@@ -16,6 +15,7 @@ from yandex_music.exceptions import (
 )
 
 from config import ROOT_DIR
+from utils.logger import logger
 from utils.users import YandexUser
 
 
@@ -58,6 +58,7 @@ class YandexMusicDownloader:
         if not os.path.exists(path):
             os.mkdir(path)
 
+    @logger.catch
     async def _get_the_favorite_playlist(
         self,
     ) -> dict[str, List[TrackShort] | str] | None:
@@ -77,6 +78,7 @@ class YandexMusicDownloader:
                 }
             )
 
+    @logger.catch
     async def _get_playlists_user(self) -> None:
         """Получить список плейлистов пользователя"""
 
@@ -96,6 +98,7 @@ class YandexMusicDownloader:
         else:
             print("У пользователя нет плейлистов либо они скрыты!")
 
+    @logger.catch
     def _get_user_playlists_names(self):
         """Получить названия плейлистов пользователя"""
 
@@ -120,6 +123,7 @@ class YandexMusicDownloader:
         for i in range(0, len(tracks_list), chunk_size):
             yield tracks_list[i : i + chunk_size]
 
+    @logger.catch
     async def _download_tracks(self, track: TrackShort, path: str = "") -> None:
         """Загрузка трека
 
@@ -165,6 +169,7 @@ class YandexMusicDownloader:
             return result
         return result
 
+    @logger.catch
     async def _download_tracks_from_the_playlist(self) -> None:
         """Скачать треки из плейлистов"""
 

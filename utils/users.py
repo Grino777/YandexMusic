@@ -109,7 +109,7 @@ class Users:
 
         if user is None:
             print("Пользователь не найден")
-            return YandexUser(login='', uid=0)
+            return YandexUser(login="", uid=0)
         else:
             return user[0]
 
@@ -130,7 +130,7 @@ class Users:
 
         url = f"https://api.music.yandex.net/users/{username}"
 
-        response: Response = requests.get(url=url, timeout=10)
+        response: Response = requests.get(url=url)
 
         if response.status_code == 200:
             resp_result = response.json()
